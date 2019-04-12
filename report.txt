@@ -1,0 +1,100 @@
+Little Log File System:
+
+This is my (naive) attempt at a log structured file system.
+
+The initial goal was a true log structured file system, but as time elapsed and finals neared,
+corners were cut to meet the deadline.
+
+Shell:
+
+I've created an interactive shell script to work with the files and directories. First run "initLLFS.c" then run the "runFileSystem.c"
+file and it will tell you the operations that you can use upon initialization. ctrl-d or exit to exit.
+
+Directories:
+
+Directories and their inodes are stored in the first available spot on disk when initially created.
+They are accessed through their inode which is stored under their name in the enclosing directory.
+When a directory is updated, it is read from disk, changed, and written back to the same block.
+The inode doesn't move and neithter does it. Not very log like :(
+
+Files:
+
+Files are accessible through the directory they are created in via their filename. When updated,
+only the blocks that are changed will be replaced into blocks that are unallocated. I chose to 
+write the updated block to the first available block rather than at the end of the log because I never
+even got to a system of periodic updates to improve write/read performance. Finally, I omitted single
+and double indirection blocks on the file inodes, so a maximum of 5120 byte files.
+
+imap:
+
+I did implement an imap to keep track of all the file's inodes moving around. I took the 
+reserved blocks from 2-9 and filled them with int16_t[256] arrays since that allowed for a 1-1
+inode-file/directory relationship in the worst case of many small files.
+
+Performance:
+
+The overhead in my filesystem is tremendous. No piece of data is stored in memory persistently.
+Every operation done will result in multiple reads from disk to get imap, FBV, and other necessary
+data as needed.
+
+-----------------------------------------------------------------------------------------------
+
+Operations that the shell and test script script use:
+
+-----------------------------------------------------------------------------------------------
+int initLLFS()										      
+-----------------------------------------------------------------------------------------------
+
+Initializes file system. Creates vdisk and returns inode number of the root directory
+
+-----------------------------------------------------------------------------------------------
+int openDirectory(FILE* disk, int parentDirectory, char* subDirectoryName);
+-----------------------------------------------------------------------------------------------
+
+makes current directory that of the subDirectory name passed.
+
+-----------------------------------------------------------------------------------------------
+void createDirectory(FILE* disk, int currentDirectory, char* filename)
+-----------------------------------------------------------------------------------------------
+
+Creates a subdirectory within the directory of the inode that was passed to "currentDirectory".
+Stored in parent directory under the filename given.
+
+*Confusing naming scheme im sorry!*
+
+-----------------------------------------------------------------------------------------------
+void deleteDirectory(FILE* disk, int parentDirectory, char* subDirectoryName)
+-----------------------------------------------------------------------------------------------
+
+Deletes the subdirectory within the directory of the inode that was passed to "currentDirectory"
+
+-----------------------------------------------------------------------------------------------
+void listFileNames(FILE* disk, int directory)
+-----------------------------------------------------------------------------------------------
+
+This will print all file and directory names that are present in the directory inode passed.
+
+-----------------------------------------------------------------------------------------------
+char* readFileInDirectory(FILE* disk, int currentDirectoryInode, char* filename)
+-----------------------------------------------------------------------------------------------
+
+Returns the data stored at the filename given in the directory inode given.
+
+-----------------------------------------------------------------------------------------------
+void writeToFileInDirectory(FILE* disk, int currentDirectoryInode, char* filename, char* data)
+-----------------------------------------------------------------------------------------------
+
+Alters the file of the filename given to the data passed in the directory inode.
+
+-----------------------------------------------------------------------------------------------
+void createFileInDirectory(FILE* disk, int currentDirectoryInode, char* filename, char* data)
+-----------------------------------------------------------------------------------------------
+
+creates a file with data passed. Can be reached from the directory with the filename
+
+-----------------------------------------------------------------------------------------------
+void deleteFileInDirectory(FILE* disk, int currentDirectoryInode, char* filename)
+-----------------------------------------------------------------------------------------------
+
+Deletes a file with the filename given inside the directory of the inode passed.
+
